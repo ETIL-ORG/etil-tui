@@ -445,9 +445,9 @@ Linear algebra operations backed by LAPACK/BLAS routines. Available when built w
 | `mat-` | `( mat1 mat2 -- mat )` | Element-wise matrix subtraction |
 | `mat-scale` | `( mat scalar -- mat )` | Multiply matrix by scalar |
 | `mat-transpose` | `( mat -- mat )` | Transpose matrix |
-| `mat-solve` | `( A b -- x flag )` | Solve Ax=b via LU factorization (DGESV). Flag 0=success |
-| `mat-inv` | `( mat -- inv flag )` | Matrix inverse via LU (DGETRF+DGETRI). Flag 0=success |
-| `mat-det` | `( mat -- det flag )` | Matrix determinant via LU factorization. Flag 0=success |
+| `mat-solve` | `( A b -- x flag )` | Solve Ax=b via LU factorization (DGESV). Flag true=success |
+| `mat-inv` | `( mat -- inv flag )` | Matrix inverse via LU (DGETRF+DGETRI). Flag true=success |
+| `mat-det` | `( mat -- det flag )` | Matrix determinant via LU factorization. Flag true=success |
 | `mat-eigen` | `( mat -- eigenvalues eigenvectors flag )` | Eigendecomposition (DSYEV for symmetric, DGEEV for general) |
 | `mat-svd` | `( mat -- U S Vt flag )` | Singular value decomposition (DGESVD) |
 | `mat-lstsq` | `( A b -- x flag )` | Least squares solve (DGELS) |
