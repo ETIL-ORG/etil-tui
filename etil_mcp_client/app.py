@@ -1121,6 +1121,8 @@ class EtilMcpApp(App):
         """Save screenshot to configured dir or ~/.etil/screenshots/."""
         screenshot_dir = self._config.screen_dir or os.path.expanduser("~/.etil/screenshots")
         os.makedirs(screenshot_dir, exist_ok=True)
+        if filename is None:
+            filename = datetime.now().strftime("%Y%m%dT%H%M%S") + "-etil-tui.svg"
         try:
             saved = self.save_screenshot(
                 filename=filename, path=screenshot_dir, time_format=time_format,
