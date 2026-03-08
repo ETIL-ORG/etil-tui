@@ -1,0 +1,23 @@
+# Virtual environment
+venv/
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+
+# Pytest
+.pytest_cache/
+
+# Claude Code
+.claude/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build output
+*.deb
+packages/
