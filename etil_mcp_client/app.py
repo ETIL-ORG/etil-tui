@@ -17,7 +17,7 @@ from textual.widgets import Input
 
 from .admin_formatter import (
     format_roles_list, format_role_detail, format_users_list,
-    format_mutation_result,
+    format_mutation_result, format_perms_reference, parse_perm_value,
 )
 from .completer import CompletionOverlay
 from .config import ClientConfig
@@ -58,9 +58,11 @@ Meta-commands:
   /quit         Exit the client
 
 Admin commands (requires role_admin permission):
+  /admin-perms              List all permission keys, types, defaults
   /admin-roles              List all roles
   /admin-role <name>        Show role details
-  /admin-set-role <n> <json>  Create/update role
+  /admin-set-role <n> <json>  Create/update role (full JSON)
+  /admin-set-perm <role> <key> <val>  Set one permission
   /admin-del-role <name>    Delete a role
   /admin-users              List all users
   /admin-set-user <id> <role>  Assign user to role
@@ -573,7 +575,10 @@ class EtilMcpApp(App):
             return
 
         try:
-            if verb == "/admin-roles":
+            if verb == "/admin-perms":
+                self._admin_perms()
+                return
+            elif verb == "/admin-roles":
                 await self._admin_roles()
             elif verb == "/admin-role":
                 if not arg:
@@ -586,6 +591,12 @@ class EtilMcpApp(App):
                         "Usage: /admin-set-role <name> <json>")
                     return
                 await self._admin_set_role(arg)
+            elif verb == "/admin-set-perm":
+                if not arg:
+                    self.server_io.append_error(
+                        "Usage: /admin-set-perm <role> <key> <value>")
+                    return
+                await self._admin_set_perm(arg)
             elif verb == "/admin-del-role":
                 if not arg:
                     self.server_io.append_error("Usage: /admin-del-role <name>")
@@ -619,6 +630,48 @@ class EtilMcpApp(App):
             self.server_io.append_error("Request cancelled (server disconnected)")
         except Exception as exc:
             self.server_io.append_error(f"Error: {exc}")
+
+    def _admin_perms(self) -> None:
+        self.server_io.append_info(format_perms_reference())
+
+    async def _admin_set_perm(self, arg: str) -> None:
+        # Split: role key value (value may contain spaces for JSON arrays)
+        parts = arg.split(None, 2)
+        if len(parts) < 3:
+            self.server_io.append_error(
+                "Usage: /admin-set-perm <role> <key> <value>\n"
+                "  Use /admin-perms to see available keys and types.")
+            return
+        role_name, key, raw_value = parts
+
+        try:
+            parsed = parse_perm_value(key, raw_value)
+        except ValueError as e:
+            self.server_io.append_error(str(e))
+            return
+
+        # Fetch current role to merge
+        response = await self._call_admin_tool(
+            "admin_get_role", {"role": role_name})
+        data, error = self._extract_admin_result(response)
+        if error:
+            self.server_io.append_error(error)
+            return
+
+        perms = data.get("permissions", {})
+        perms[key] = parsed
+
+        # Update role with merged permissions
+        response = await self._call_admin_tool(
+            "admin_set_role", {"role": role_name, "permissions": perms})
+        data, error = self._extract_admin_result(response)
+        if error:
+            self.server_io.append_error(error)
+            return
+        self.server_io.append_info(
+            f"Role '{role_name}': {key} = {raw_value}")
+        self._notify(NotificationType.SUCCESS,
+                     f"{role_name}.{key} = {raw_value}")
 
     async def _admin_roles(self) -> None:
         response = await self._call_admin_tool("admin_list_roles")

@@ -95,9 +95,11 @@ META_COMMANDS = [
 ]
 
 META_ADMIN_COMMANDS = [
+    ("/admin-perms", "List all permission keys, types, and defaults"),
     ("/admin-roles", "List all roles"),
     ("/admin-role \\<name\\>", "Show role permissions"),
-    ("/admin-set-role \\<name\\> \\<json\\>", "Create or update a role"),
+    ("/admin-set-role \\<name\\> \\<json\\>", "Create or update a role (full JSON)"),
+    ("/admin-set-perm \\<role\\> \\<key\\> \\<val\\>", "Set a single permission on a role"),
     ("/admin-del-role \\<name\\>", "Delete a role (requires confirmation)"),
     ("/admin-users", "List all user-to-role mappings"),
     ("/admin-set-user \\<id\\> \\<role\\>", "Assign user to role"),

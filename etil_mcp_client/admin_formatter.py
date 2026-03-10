@@ -185,3 +185,131 @@ def format_mutation_result(data: dict) -> str:
 
     # Fallback
     return str(data)
+
+
+# ── Permission reference ──────────────────────────────────────
+
+# Complete permission schema: (key, type, default, description)
+_PERM_SCHEMA: list[tuple[str, str, str, str]] = [
+    # System
+    ("max_sessions",            "int",        "2",           "Max concurrent sessions per user"),
+    ("instruction_budget",      "int",        "10000000",    "Max instructions per interpret call"),
+    ("role_admin",              "bool",       "false",       "Can manage roles and users"),
+    ("allowlist_admin",         "bool",       "false",       "Can manage the IP allowlist"),
+    ("list_sessions",           "bool",       "false",       "Can list active sessions"),
+    ("session_kick",            "bool",       "false",       "Can terminate other sessions"),
+    ("send_system_notification","bool",       "false",       "Can send system-wide notifications"),
+    ("send_user_notification",  "bool",       "false",       "Can send per-user notifications"),
+    # LVFS
+    ("lvfs_modify",             "bool",       "false",       "Can write/delete files in LVFS"),
+    ("disk_quota",              "int (bytes)","1048576",     "Max bytes in session home (1 MB)"),
+    # Network Client (outbound)
+    ("net_client_allowed",      "bool",       "false",       "Can make outbound HTTP requests"),
+    ("net_client_domains",      "[string]",   "[]",          "Allowed domains ([\"*\"] = all)"),
+    ("net_client_quota",        "int",        "100",         "Max HTTP requests per session"),
+    # Network Server (inbound)
+    ("net_server_bind",         "bool",       "false",       "Can bind a listening socket"),
+    ("net_server_tcp",          "bool",       "false",       "Can accept TCP connections"),
+    ("net_server_udp",          "bool",       "false",       "Can receive UDP datagrams"),
+    # Code Execution
+    ("evaluate",                "bool",       "true",        "Can use the evaluate word"),
+    ("evaluate_tainted",        "bool",       "false",       "Can evaluate tainted strings"),
+    # Database
+    ("mongo_access",            "bool",       "false",       "Can use mongo-* words"),
+    ("mongo_query_quota",       "int",        "1000",        "Max queries per session (0 = unlimited)"),
+]
+
+# Map from key name to section name for grouping
+_KEY_TO_SECTION: dict[str, str] = {}
+for _sec_name, _sec_keys in _SECTIONS:
+    for _k in _sec_keys:
+        _KEY_TO_SECTION[_k] = _sec_name
+
+
+def format_perms_reference() -> str:
+    """Format the complete permission reference table."""
+    lines = [
+        "Permission Reference (21 keys):",
+        "",
+    ]
+
+    current_section = ""
+    kw = max(len(k) for k, _, _, _ in _PERM_SCHEMA)
+    tw = max(len(t) for _, t, _, _ in _PERM_SCHEMA)
+    dw = max(len(d) for _, _, d, _ in _PERM_SCHEMA)
+
+    for key, typ, default, desc in _PERM_SCHEMA:
+        section = _KEY_TO_SECTION.get(key, "Other")
+        if section != current_section:
+            if current_section:
+                lines.append("")
+            lines.append(f"  {section}:")
+            current_section = section
+        lines.append(
+            f"    {key:<{kw}}  {typ:<{tw}}  {default:<{dw}}  {desc}"
+        )
+
+    lines.append("")
+    lines.append("JSON syntax for /admin-set-role:")
+    lines.append('  /admin-set-role <name> {"key": value, ...}')
+    lines.append("")
+    lines.append("Examples:")
+    lines.append('  /admin-set-role researcher {"evaluate": true, "mongo_access": true}')
+    lines.append('  /admin-set-role power {"net_client_allowed": true, "net_client_domains": ["*"]}')
+    lines.append('  /admin-set-role minimal {"max_sessions": 1, "instruction_budget": 1000000}')
+    lines.append("")
+    lines.append("Single-key shortcut:")
+    lines.append("  /admin-set-perm <role> <key> <value>")
+    lines.append("")
+    lines.append("Examples:")
+    lines.append("  /admin-set-perm admin role_admin true")
+    lines.append("  /admin-set-perm researcher disk_quota 10485760")
+    lines.append('  /admin-set-perm power net_client_domains ["*"]')
+    return "\n".join(lines)
+
+
+def parse_perm_value(key: str, raw: str) -> object:
+    """Parse a raw string value into the correct type for a permission key.
+
+    Returns the parsed value or raises ValueError with a descriptive message.
+    """
+    # Find the schema entry
+    schema_entry = None
+    for k, typ, default, desc in _PERM_SCHEMA:
+        if k == key:
+            schema_entry = (k, typ, default, desc)
+            break
+    if schema_entry is None:
+        raise ValueError(f"Unknown permission key: {key}")
+
+    _, typ, _, _ = schema_entry
+
+    if typ == "bool":
+        if raw.lower() in ("true", "1", "yes", "on"):
+            return True
+        if raw.lower() in ("false", "0", "no", "off"):
+            return False
+        raise ValueError(f"{key}: expected true/false, got '{raw}'")
+
+    if typ in ("int", "int (bytes)"):
+        try:
+            return int(raw)
+        except ValueError:
+            raise ValueError(f"{key}: expected integer, got '{raw}'")
+
+    if typ == "[string]":
+        # Accept JSON array or bare * shorthand
+        if raw.strip() == "*":
+            return ["*"]
+        if raw.strip() == "[]":
+            return []
+        import json as _json
+        try:
+            val = _json.loads(raw)
+            if isinstance(val, list):
+                return val
+            raise ValueError(f"{key}: expected JSON array, got {type(val).__name__}")
+        except _json.JSONDecodeError as e:
+            raise ValueError(f"{key}: invalid JSON array: {e}")
+
+    raise ValueError(f"{key}: unsupported type '{typ}'")
