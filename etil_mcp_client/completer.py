@@ -9,6 +9,15 @@ from textual.widgets.option_list import Option
 
 # Meta-commands available in the TUI (sorted for consistent prefix matching)
 META_COMMANDS: list[str] = sorted([
+    "/admin-clone-role",
+    "/admin-del-role",
+    "/admin-del-user",
+    "/admin-reload",
+    "/admin-role",
+    "/admin-roles",
+    "/admin-set-role",
+    "/admin-set-user",
+    "/admin-users",
     "/clear",
     "/download",
     "/help",

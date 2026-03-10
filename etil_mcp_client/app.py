@@ -15,6 +15,10 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.widgets import Input
 
+from .admin_formatter import (
+    format_roles_list, format_role_detail, format_users_list,
+    format_mutation_result,
+)
 from .completer import CompletionOverlay
 from .config import ClientConfig
 from .connections import update_connection_jwt, clear_connection_jwt
@@ -52,6 +56,17 @@ Meta-commands:
   /help [word]  Open help browser (optionally at word)
   /clear        Clear server output panel
   /quit         Exit the client
+
+Admin commands (requires role_admin permission):
+  /admin-roles              List all roles
+  /admin-role <name>        Show role details
+  /admin-set-role <n> <json>  Create/update role
+  /admin-del-role <name>    Delete a role
+  /admin-users              List all users
+  /admin-set-user <id> <role>  Assign user to role
+  /admin-del-user <id>     Delete a user mapping
+  /admin-reload             Reload auth config from disk
+  /admin-clone-role <src> <dst>  Clone a role
 
 Press F1 to open the help browser.\
 """
@@ -119,6 +134,9 @@ class EtilMcpApp(App):
         self._command_in_flight = False
         self._session_logger = SessionLogger(log_dir=config.log_dir)
         self._completer = CompletionOverlay()
+
+        # Pending confirmation for destructive admin commands
+        self._pending_confirm: tuple[str, object] | None = None
 
         # OAuth / JWT auth state
         self._auth_provider: str = ""
@@ -358,6 +376,17 @@ class EtilMcpApp(App):
     async def _run_command(self, command: str) -> None:
         """Run a command as a background task so the event loop stays free."""
         try:
+            # Check for pending confirmation first
+            if self._pending_confirm is not None:
+                prompt, callback = self._pending_confirm
+                self._pending_confirm = None
+                self.server_io.input_widget.placeholder = "etil>"
+                if command.lower() == "yes":
+                    await callback()
+                else:
+                    self.server_io.append_info("Cancelled.")
+                return
+
             if command.startswith("/"):
                 await self._handle_meta_command(command)
             else:
@@ -448,6 +477,8 @@ class EtilMcpApp(App):
                 await self._meta_download(arg)
             else:
                 self.server_io.append_error("Usage: /download <remote-path> [local-path]")
+        elif verb.startswith("/admin-"):
+            await self._handle_admin_command(verb, arg)
         else:
             self.server_io.append_error(f"Unknown command: {verb}")
 
@@ -486,6 +517,250 @@ class EtilMcpApp(App):
             self.server_io.append_error("Request cancelled (server disconnected)")
         except Exception as exc:
             self.server_io.append_error(f"Error: {exc}")
+
+    # ── Admin command handlers ─────────────────────────────────
+
+    def _extract_admin_result(self, response: dict) -> tuple[dict | None, str | None]:
+        """Extract parsed JSON data from an admin tool response.
+
+        Returns (data, error).  On success, data is the parsed dict and error
+        is None.  On failure, data is None and error is the error message.
+        """
+        if "error" in response:
+            err = response["error"]
+            return None, f"JSON-RPC error {err.get('code', '?')}: {err.get('message', '')}"
+
+        result = response.get("result", {})
+        is_error = result.get("isError", False) if isinstance(result, dict) else False
+        content_list = result.get("content", []) if isinstance(result, dict) else []
+
+        parts: list[str] = []
+        for item in content_list:
+            text = item.get("text", "")
+            if text:
+                parts.append(text)
+
+        combined = "\n".join(parts)
+        if is_error:
+            return None, combined
+
+        try:
+            data = json.loads(combined)
+            return data, None
+        except (json.JSONDecodeError, TypeError):
+            # Plain text response
+            return {"message": combined}, None
+
+    async def _call_admin_tool(self, tool_name: str,
+                                args: dict | None = None) -> dict:
+        """Call an admin MCP tool with session-expiry retry."""
+        response = await self._protocol.call_tool(tool_name, args or {})
+        if self._is_session_expired(response) and await self._reconnect():
+            response = await self._protocol.call_tool(tool_name, args or {})
+        return response
+
+    def _request_confirmation(self, prompt: str, callback: object) -> None:
+        """Set up a pending confirmation.  The next input will be checked."""
+        self._pending_confirm = (prompt, callback)
+        self.server_io.append_info(prompt)
+        self.server_io.append_info("Type 'yes' to confirm:")
+        self.server_io.input_widget.placeholder = "yes / no >"
+
+    async def _handle_admin_command(self, verb: str, arg: str) -> None:
+        """Dispatch /admin-* commands."""
+        if not self._connected:
+            self.server_io.append_error("Not connected to MCP server.")
+            return
+
+        try:
+            if verb == "/admin-roles":
+                await self._admin_roles()
+            elif verb == "/admin-role":
+                if not arg:
+                    self.server_io.append_error("Usage: /admin-role <name>")
+                    return
+                await self._admin_role(arg.strip())
+            elif verb == "/admin-set-role":
+                if not arg:
+                    self.server_io.append_error(
+                        "Usage: /admin-set-role <name> <json>")
+                    return
+                await self._admin_set_role(arg)
+            elif verb == "/admin-del-role":
+                if not arg:
+                    self.server_io.append_error("Usage: /admin-del-role <name>")
+                    return
+                await self._admin_del_role(arg.strip())
+            elif verb == "/admin-users":
+                await self._admin_users()
+            elif verb == "/admin-set-user":
+                if not arg:
+                    self.server_io.append_error(
+                        "Usage: /admin-set-user <user_id> <role>")
+                    return
+                await self._admin_set_user(arg)
+            elif verb == "/admin-del-user":
+                if not arg:
+                    self.server_io.append_error(
+                        "Usage: /admin-del-user <user_id>")
+                    return
+                await self._admin_del_user(arg.strip())
+            elif verb == "/admin-reload":
+                await self._admin_reload()
+            elif verb == "/admin-clone-role":
+                if not arg:
+                    self.server_io.append_error(
+                        "Usage: /admin-clone-role <source> <new-name>")
+                    return
+                await self._admin_clone_role(arg)
+            else:
+                self.server_io.append_error(f"Unknown admin command: {verb}")
+        except asyncio.CancelledError:
+            self.server_io.append_error("Request cancelled (server disconnected)")
+        except Exception as exc:
+            self.server_io.append_error(f"Error: {exc}")
+
+    async def _admin_roles(self) -> None:
+        response = await self._call_admin_tool("admin_list_roles")
+        data, error = self._extract_admin_result(response)
+        if error:
+            self.server_io.append_error(error)
+            return
+        self.server_io.append_info(format_roles_list(data))
+
+    async def _admin_role(self, name: str) -> None:
+        response = await self._call_admin_tool("admin_get_role", {"role": name})
+        data, error = self._extract_admin_result(response)
+        if error:
+            self.server_io.append_error(error)
+            return
+        self.server_io.append_info(format_role_detail(data))
+
+    async def _admin_set_role(self, arg: str) -> None:
+        # Split: first token is role name, rest is JSON
+        parts = arg.split(None, 1)
+        if len(parts) < 2:
+            self.server_io.append_error(
+                "Usage: /admin-set-role <name> {\"key\": value, ...}")
+            return
+        role_name = parts[0]
+        json_str = parts[1]
+
+        try:
+            perms = json.loads(json_str)
+        except json.JSONDecodeError as e:
+            self.server_io.append_error(f"Invalid JSON: {e}")
+            return
+
+        response = await self._call_admin_tool(
+            "admin_set_role", {"role": role_name, "permissions": perms})
+        data, error = self._extract_admin_result(response)
+        if error:
+            self.server_io.append_error(error)
+            return
+        msg = format_mutation_result(data)
+        self.server_io.append_info(msg)
+        self._notify(NotificationType.SUCCESS, msg)
+
+    async def _admin_del_role(self, name: str) -> None:
+        async def do_delete():
+            response = await self._call_admin_tool(
+                "admin_delete_role", {"role": name})
+            data, error = self._extract_admin_result(response)
+            if error:
+                self.server_io.append_error(error)
+                return
+            msg = format_mutation_result(data)
+            self.server_io.append_info(msg)
+            self._notify(NotificationType.SUCCESS, msg)
+
+        self._request_confirmation(
+            f"Delete role '{name}'? Users with this role will revert to default.",
+            do_delete)
+
+    async def _admin_users(self) -> None:
+        response = await self._call_admin_tool("admin_list_users")
+        data, error = self._extract_admin_result(response)
+        if error:
+            self.server_io.append_error(error)
+            return
+        self.server_io.append_info(format_users_list(data))
+
+    async def _admin_set_user(self, arg: str) -> None:
+        parts = arg.split()
+        if len(parts) != 2:
+            self.server_io.append_error(
+                "Usage: /admin-set-user <user_id> <role>")
+            return
+        user_id, role = parts
+
+        response = await self._call_admin_tool(
+            "admin_set_user_role", {"user_id": user_id, "role": role})
+        data, error = self._extract_admin_result(response)
+        if error:
+            self.server_io.append_error(error)
+            return
+        msg = format_mutation_result(data)
+        self.server_io.append_info(msg)
+        self._notify(NotificationType.SUCCESS, msg)
+
+    async def _admin_del_user(self, user_id: str) -> None:
+        async def do_delete():
+            response = await self._call_admin_tool(
+                "admin_delete_user", {"user_id": user_id})
+            data, error = self._extract_admin_result(response)
+            if error:
+                self.server_io.append_error(error)
+                return
+            msg = format_mutation_result(data)
+            self.server_io.append_info(msg)
+            self._notify(NotificationType.SUCCESS, msg)
+
+        self._request_confirmation(
+            f"Delete user '{user_id}'? Their role will revert to default.",
+            do_delete)
+
+    async def _admin_reload(self) -> None:
+        response = await self._call_admin_tool("admin_reload_config")
+        data, error = self._extract_admin_result(response)
+        if error:
+            self.server_io.append_error(error)
+            return
+        msg = format_mutation_result(data)
+        self.server_io.append_info(msg)
+        self._notify(NotificationType.SUCCESS, msg)
+
+    async def _admin_clone_role(self, arg: str) -> None:
+        parts = arg.split()
+        if len(parts) != 2:
+            self.server_io.append_error(
+                "Usage: /admin-clone-role <source> <new-name>")
+            return
+        src, dst = parts
+
+        # Fetch source role
+        response = await self._call_admin_tool(
+            "admin_get_role", {"role": src})
+        data, error = self._extract_admin_result(response)
+        if error:
+            self.server_io.append_error(error)
+            return
+
+        perms = data.get("permissions", {})
+        if not perms:
+            self.server_io.append_error(f"Role '{src}' has no permissions.")
+            return
+
+        # Create new role with same permissions
+        response = await self._call_admin_tool(
+            "admin_set_role", {"role": dst, "permissions": perms})
+        data, error = self._extract_admin_result(response)
+        if error:
+            self.server_io.append_error(error)
+            return
+        msg = f"Role '{dst}' cloned from '{src}'."
+        self.server_io.append_info(msg)
+        self._notify(NotificationType.SUCCESS, msg)
 
     def _scan_includes(self, file_path: str, base_dir: str,
                         uploaded: set[str],

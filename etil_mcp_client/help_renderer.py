@@ -94,6 +94,18 @@ META_COMMANDS = [
     ("/quit", "Exit the client"),
 ]
 
+META_ADMIN_COMMANDS = [
+    ("/admin-roles", "List all roles"),
+    ("/admin-role \\<name\\>", "Show role permissions"),
+    ("/admin-set-role \\<name\\> \\<json\\>", "Create or update a role"),
+    ("/admin-del-role \\<name\\>", "Delete a role (requires confirmation)"),
+    ("/admin-users", "List all user-to-role mappings"),
+    ("/admin-set-user \\<id\\> \\<role\\>", "Assign user to role"),
+    ("/admin-del-user \\<id\\>", "Delete user mapping (requires confirmation)"),
+    ("/admin-reload", "Reload auth config from disk"),
+    ("/admin-clone-role \\<src\\> \\<dst\\>", "Clone a role under a new name"),
+]
+
 META_KEYBINDINGS = [
     ("F1", "Open help browser"),
     ("F2", "Cycle layout (both / IO only / JSON-RPC only)"),
@@ -149,6 +161,15 @@ def render_meta_commands() -> str:
         "|---------|-------------|",
     ]
     for cmd, desc in META_COMMANDS:
+        lines.append(f"| `{cmd}` | {desc} |")
+    lines.append("")
+    lines.append("## Admin Commands")
+    lines.append("")
+    lines.append("*Requires `role_admin` permission.*")
+    lines.append("")
+    lines.append("| Command | Description |")
+    lines.append("|---------|-------------|")
+    for cmd, desc in META_ADMIN_COMMANDS:
         lines.append(f"| `{cmd}` | {desc} |")
     lines.append("")
     lines.append("**Keybindings:**")
