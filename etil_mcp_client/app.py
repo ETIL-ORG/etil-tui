@@ -67,6 +67,7 @@ Admin commands (requires role_admin permission):
   /admin-users              List all users
   /admin-set-user <id> <role>  Assign user to role
   /admin-del-user <id>     Delete a user mapping
+  /admin-set-default-role <name>  Set the default role for new users
   /admin-reload             Reload auth config from disk
   /admin-clone-role <src> <dst>  Clone a role
 
@@ -616,6 +617,12 @@ class EtilMcpApp(App):
                         "Usage: /admin-del-user <user_id>")
                     return
                 await self._admin_del_user(arg.strip())
+            elif verb == "/admin-set-default-role":
+                if not arg:
+                    self.server_io.append_error(
+                        "Usage: /admin-set-default-role <role-name>")
+                    return
+                await self._admin_set_default_role(arg.strip())
             elif verb == "/admin-reload":
                 await self._admin_reload()
             elif verb == "/admin-clone-role":
@@ -772,6 +779,17 @@ class EtilMcpApp(App):
         self._request_confirmation(
             f"Delete user '{user_id}'? Their role will revert to default.",
             do_delete)
+
+    async def _admin_set_default_role(self, role_name: str) -> None:
+        response = await self._call_admin_tool(
+            "admin_set_default_role", {"role": role_name})
+        data, error = self._extract_admin_result(response)
+        if error:
+            self.server_io.append_error(error)
+            return
+        msg = format_mutation_result(data)
+        self.server_io.append_info(msg)
+        self._notify(NotificationType.SUCCESS, msg)
 
     async def _admin_reload(self) -> None:
         response = await self._call_admin_tool("admin_reload_config")

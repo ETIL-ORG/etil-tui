@@ -16,6 +16,7 @@ META_COMMANDS: list[str] = sorted([
     "/admin-reload",
     "/admin-role",
     "/admin-roles",
+    "/admin-set-default-role",
     "/admin-set-perm",
     "/admin-set-role",
     "/admin-set-user",
