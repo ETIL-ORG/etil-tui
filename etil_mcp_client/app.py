@@ -292,9 +292,14 @@ class EtilMcpApp(App):
             )
         else:
             self._connected = True
-            server_info = result.get("result", {}).get("serverInfo", {})
+            init_result = result.get("result", {})
+            server_info = init_result.get("serverInfo", {})
             name = server_info.get("name", "unknown")
             version = server_info.get("version", "?")
+            # Server returns authoritative role from users.json in _meta.
+            server_role = init_result.get("_meta", {}).get("role", "")
+            if server_role:
+                self._auth_role = server_role
             self._notify(
                 NotificationType.SUCCESS,
                 f"Connected: {name} v{version}",
