@@ -356,6 +356,10 @@ class EtilMcpApp(App):
         self.server_io.save_history(HISTORY_PATH)
         for path in self._session_logger.close_all():
             self._notify(NotificationType.INFO, f"Log file {path} closed")
+        # Shut down help-browser sandbox session (if any) before main session
+        for screen in self.screen_stack:
+            if isinstance(screen, HelpScreen):
+                await screen._shutdown_sandbox()
         self._protocol.cancel_all()
         await self._transport.shutdown()
         self.exit()
