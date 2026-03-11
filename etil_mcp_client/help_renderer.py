@@ -105,6 +105,7 @@ META_ADMIN_COMMANDS = [
     ("/admin-set-user \\<id\\> \\<role\\>", "Assign user to role"),
     ("/admin-del-user \\<id\\>", "Delete user mapping (requires confirmation)"),
     ("/admin-reload", "Reload auth config from disk"),
+    ("/admin-set-default-role \\<name\\>", "Set the default role for new users"),
     ("/admin-clone-role \\<src\\> \\<dst\\>", "Clone a role under a new name"),
 ]
 
