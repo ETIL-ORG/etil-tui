@@ -3,7 +3,7 @@ Copyright (c) 2026 Mark Deazley. All rights reserved.
 SPDX-License-Identifier: BSD-3-Clause
 -->
 
-# ETIL Word Reference — v0.8.13
+# ETIL Word Reference — v0.9.1
 
 Complete reference for all built-in words in the Evolutionary Threaded Interpretive Language (ETIL).
 Words are organized by category. Stack effects use FORTH notation: `( inputs -- outputs )`.
@@ -18,9 +18,9 @@ Words are organized by category. Stack effects use FORTH notation: `( inputs -- 
 | 4 | Logic | 11 | [Logic](#logic) |
 | 5 | I/O | 8 | [I/O](#io) |
 | 6 | Memory | 8 | [Memory](#memory) |
-| 7 | Math | 24 | [Math](#math) |
+| 7 | Math | 25 | [Math](#math) |
 | 8 | String | 19 | [String](#string) |
-| 9 | Array | 10 | [Array](#array) |
+| 9 | Array | 14 | [Array](#array) |
 | 10 | ByteArray | 7 | [ByteArray](#bytearray) |
 | 11 | Map | 8 | [Map](#map) |
 | 12 | JSON | 13 | [JSON](#json) |
@@ -38,11 +38,12 @@ Words are organized by category. Stack effects use FORTH notation: `( inputs -- 
 | 24 | File I/O (sync) | 13 | [File I/O (sync)](#file-io-sync) |
 | 25 | HTTP Client | 2 | [HTTP Client](#http-client) |
 | 26 | MongoDB | 5 | [MongoDB](#mongodb) |
-| 27 | Matrix | 25 | [Matrix](#matrix) |
-| 28 | Parsing | 3 | [Parsing](#parsing) |
-| 29 | Self-hosted | 8 | [Self-hosted](#self-hosted) |
-| 30 | Control Flow | 20 | [Control Flow](#control-flow) |
-|   | **Total** | **283** | |
+| 27 | Matrix | 41 | [Matrix](#matrix) |
+| 28 | Observable | 21 | [Observable](#observable) |
+| 29 | Parsing | 3 | [Parsing](#parsing) |
+| 30 | Self-hosted | 8 | [Self-hosted](#self-hosted) |
+| 31 | Control Flow | 20 | [Control Flow](#control-flow) |
+|   | **Total** | **325** | |
 
 ---
 
@@ -163,6 +164,7 @@ Words are organized by category. Stack effects use FORTH notation: `( inputs -- 
 | `f~` | `( r1 r2 r3 -- flag )` | Approximate float equality (FORTH F~). r3>0: absolute tolerance. r3=0: exact equality. r3<0: relative tolerance |
 | `random` | `( -- f )` | Push a pseudo-random float in [0.0, 1.0) |
 | `random-seed` | `( n -- )` | Seed the PRNG engine (same seed produces same sequence) |
+| `tanh` | `( x -- tanh(x) )` | Scalar hyperbolic tangent |
 | `random-range` | `( lo hi -- n )` | Push a pseudo-random integer in [lo, hi) |
 
 ## String
@@ -203,6 +205,10 @@ Words are organized by category. Stack effects use FORTH notation: `( inputs -- 
 | `array-unshift` | `( array value -- array )` | Insert value at beginning |
 | `array-compact` | `( array -- array )` | Remove zero/null elements |
 | `array-reverse` | `( array -- array )` | Reverse array in-place |
+| `array-each` | `( array xt -- )` | Execute xt for each element. The xt receives `( value -- )` |
+| `array-map` | `( array xt -- array' )` | Transform elements into new array. The xt receives `( value -- result )` |
+| `array-filter` | `( array xt -- array' )` | Keep elements where xt returns true. The xt receives `( value -- bool )` |
+| `array-reduce` | `( array xt init -- result )` | Fold to single value. The xt receives `( accumulator value -- new-accumulator )` |
 
 ## ByteArray
 
@@ -434,6 +440,7 @@ Linear algebra operations backed by LAPACK/BLAS routines. Available when built w
 | `mat-from-array` | `( array rows cols -- mat )` | Create matrix from flat array (row-major order) |
 | `mat-diag` | `( array -- mat )` | Create diagonal matrix from array of values |
 | `mat-rand` | `( rows cols -- mat )` | Create matrix with random values in [0,1) |
+| `mat-randn` | `( rows cols -- mat )` | Create matrix with standard normal random values (Box-Muller) |
 | `mat-get` | `( mat row col -- val )` | Get matrix element (bounds-checked) |
 | `mat-set` | `( mat row col val -- mat )` | Set matrix element (returns mat for chaining) |
 | `mat-rows` | `( mat -- n )` | Get row count of matrix |
@@ -443,6 +450,7 @@ Linear algebra operations backed by LAPACK/BLAS routines. Available when built w
 | `mat*` | `( mat1 mat2 -- mat )` | Matrix multiply (DGEMM) |
 | `mat+` | `( mat1 mat2 -- mat )` | Element-wise matrix addition |
 | `mat-` | `( mat1 mat2 -- mat )` | Element-wise matrix subtraction |
+| `mat-hadamard` | `( mat1 mat2 -- mat )` | Element-wise matrix multiplication (Hadamard product) |
 | `mat-scale` | `( mat scalar -- mat )` | Multiply matrix by scalar |
 | `mat-transpose` | `( mat -- mat )` | Transpose matrix |
 | `mat-solve` | `( A b -- x flag )` | Solve Ax=b via LU factorization (DGESV). Flag true=success |
@@ -453,7 +461,49 @@ Linear algebra operations backed by LAPACK/BLAS routines. Available when built w
 | `mat-lstsq` | `( A b -- x flag )` | Least squares solve (DGELS) |
 | `mat-norm` | `( mat -- val )` | Frobenius norm of matrix |
 | `mat-trace` | `( mat -- val )` | Sum of diagonal elements (square matrix required) |
+| `mat-sum` | `( mat -- scalar )` | Sum all matrix elements |
+| `mat-mean` | `( mat -- scalar )` | Mean of all matrix elements |
+| `mat-relu` | `( mat -- mat )` | Element-wise ReLU activation: max(0, x) |
+| `mat-sigmoid` | `( mat -- mat )` | Element-wise sigmoid activation: 1/(1+exp(-x)) |
+| `mat-tanh` | `( mat -- mat )` | Element-wise tanh activation |
+| `mat-relu'` | `( mat -- mat )` | Element-wise ReLU derivative from pre-activation: x>0 ? 1 : 0 |
+| `mat-sigmoid'` | `( mat -- mat )` | Element-wise sigmoid derivative from pre-activation: s(x)\*(1-s(x)) |
+| `mat-tanh'` | `( mat -- mat )` | Element-wise tanh derivative from pre-activation: 1-tanh(x)^2 |
+| `mat-softmax` | `( mat -- mat )` | Column-wise softmax (numerically stable) |
+| `mat-cross-entropy` | `( predicted actual -- scalar )` | Cross-entropy loss: -mean(actual \* log(predicted + 1e-15)) |
+| `mat-apply` | `( mat xt -- mat )` | Apply execution token to each matrix element |
+| `mat->json` | `( mat -- json )` | Convert matrix to JSON object with rows, cols, and data keys |
+| `json->mat` | `( json -- mat )` | Convert JSON object with rows, cols, data keys to matrix |
+| `mat->array` | `( mat -- array )` | Convert matrix to flat array of floats in row-major order |
 | `mat.` | `( mat -- )` | Pretty-print matrix (consumes it) |
+
+## Observable
+
+RxJS-style reactive pipelines: lazy, push-based, composable. Observables are built by chaining source, transform, and terminal operators into a pipeline. No values flow until a terminal operator (`obs-subscribe`, `obs-to-array`, `obs-reduce`, `obs-count`) executes the pipeline.
+
+| Word | Stack Effect | Description |
+|------|-------------|-------------|
+| `obs-from` | `( array -- obs )` | Create an observable from an array. Each element is emitted in order when a terminal operator executes the pipeline |
+| `obs-of` | `( value -- obs )` | Create an observable that emits a single value |
+| `obs-empty` | `( -- obs )` | Create an observable that emits no values |
+| `obs-range` | `( start end -- obs )` | Create an observable that emits integers from start (inclusive) to end (exclusive) |
+| `obs-map` | `( obs xt -- obs' )` | Transform each emitted value by applying xt. The xt receives `( value -- result )` |
+| `obs-map-with` | `( obs xt ctx -- obs' )` | Transform each value by applying xt with a context value. The xt receives `( ctx value -- result )` |
+| `obs-filter` | `( obs xt -- obs' )` | Keep only values for which xt returns true. The xt receives `( value -- bool )` |
+| `obs-filter-with` | `( obs xt ctx -- obs' )` | Keep only values for which xt returns true, with a context value. The xt receives `( ctx value -- bool )` |
+| `obs-scan` | `( obs xt init -- obs' )` | Accumulate values, emitting each intermediate result. The xt receives `( accumulator value -- new-accumulator )` |
+| `obs-reduce` | `( obs xt init -- result )` | Reduce all emitted values to a single result. Terminal operator. The xt receives `( accumulator value -- new-accumulator )` |
+| `obs-take` | `( obs n -- obs' )` | Emit only the first n values, then stop |
+| `obs-skip` | `( obs n -- obs' )` | Skip the first n values, then emit the rest |
+| `obs-distinct` | `( obs -- obs' )` | Suppress consecutive duplicate values |
+| `obs-merge` | `( obs-a obs-b max-concurrent -- obs )` | Merge two observables. Third parameter is max concurrent merges (0 = unlimited) |
+| `obs-concat` | `( obs-a obs-b -- obs )` | Concatenate two observables — emit all from obs-a, then all from obs-b |
+| `obs-zip` | `( obs-a obs-b -- obs )` | Zip two observables into 2-element array pairs. Stops at the shorter source |
+| `obs-subscribe` | `( obs xt -- )` | Execute the pipeline, calling xt for each emitted value. Terminal operator. The xt receives `( value -- )` |
+| `obs-to-array` | `( obs -- array )` | Execute the pipeline, collecting all emitted values into a new array. Terminal operator |
+| `obs-count` | `( obs -- n )` | Execute the pipeline, counting emitted values. Terminal operator |
+| `obs?` | `( value -- bool )` | Test if the top-of-stack value is an observable |
+| `obs-kind` | `( obs -- string )` | Return the kind name of an observable node (e.g. from-array, map, filter, range) |
 
 ## Parsing
 
