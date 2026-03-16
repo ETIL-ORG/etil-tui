@@ -198,6 +198,7 @@ _PERM_SCHEMA: list[tuple[str, str, str, str]] = [
     ("allowlist_admin",         "bool",       "false",       "Can manage the IP allowlist"),
     ("list_sessions",           "bool",       "false",       "Can list active sessions"),
     ("session_kick",            "bool",       "false",       "Can terminate other sessions"),
+    ("session_idle_timeout_seconds","int",    "1800",        "Idle timeout in seconds (default 30 min)"),
     ("send_system_notification","bool",       "false",       "Can send system-wide notifications"),
     ("send_user_notification",  "bool",       "false",       "Can send per-user notifications"),
     # LVFS
