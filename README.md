@@ -173,8 +173,9 @@ etil-tui --connect production
 
 ## ETIL Word Reference
 
-See [WORDS.md](WORDS.md) for a detailed reference of all ETIL words organized by category. This document is
-kept in sync with `data/help.til` in the ETIL repository.
+See [README.etil.md](README.etil.md) for the full ETIL project documentation including all words
+organized by category with stack effects and examples. This file is a copy of the ETIL repository's
+`README.md` and is refreshed on each ETIL release.
 
 ## Building `.deb` Packages
 
