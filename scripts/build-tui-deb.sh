@@ -118,6 +118,13 @@ Description: ETIL MCP Client TUI
 Homepage: https://github.com/krystalmonolith/etil-tui
 EOF
 
+# --- Create DEBIAN/postinst ---
+cat > "$STAGE/DEBIAN/postinst" <<'POSTINST'
+#!/bin/sh
+echo "Documentation installed at /opt/etil-tui/doc/"
+POSTINST
+chmod 755 "$STAGE/DEBIAN/postinst"
+
 # --- Build the .deb ---
 echo "Packaging ..."
 dpkg-deb --build --root-owner-group "$STAGE" "$DEB_FILE"
