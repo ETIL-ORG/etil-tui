@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Mark Deazley. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+
 """Tests for the OAuth login-first flow in on_mount().
 
 These tests verify that when login_provider is set (wizard or --login),

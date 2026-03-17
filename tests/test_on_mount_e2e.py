@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Mark Deazley. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+
 """End-to-end test of on_mount OAuth flow.
 
 Tests the ACTUAL on_mount logic path by extracting and running the
