@@ -45,8 +45,7 @@ cp "$PROJECT_DIR/requirements.txt" "$OPT/"
 
 # --- Copy documentation ---
 mkdir -p "$OPT/doc"
-cp "$PROJECT_DIR/README.md" "$OPT/doc/"
-cp "$PROJECT_DIR/README.etil.md" "$OPT/doc/" 2>/dev/null || true
+cp "$PROJECT_DIR"/*.md "$OPT/doc/" 2>/dev/null || true
 
 # Remove __pycache__ directories
 find "$OPT" -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
