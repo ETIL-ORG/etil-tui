@@ -48,6 +48,8 @@ _SECTIONS: list[tuple[str, list[str]]] = [
         "max_sessions", "instruction_budget", "role_admin", "allowlist_admin",
         "list_sessions", "session_kick",
         "send_system_notification", "send_user_notification",
+        "session_idle_timeout_seconds",
+        "interpret_execution_limit", "session_execution_limit",
     ]),
     ("LVFS", [
         "lvfs_modify", "disk_quota",
@@ -199,6 +201,8 @@ _PERM_SCHEMA: list[tuple[str, str, str, str]] = [
     ("list_sessions",           "bool",       "false",       "Can list active sessions"),
     ("session_kick",            "bool",       "false",       "Can terminate other sessions"),
     ("session_idle_timeout_seconds","int",    "1800",        "Idle timeout in seconds (default 30 min)"),
+    ("interpret_execution_limit","int",       "30",          "Per-interpret time limit in seconds (0 = unlimited)"),
+    ("session_execution_limit",  "int",       "0",           "Cumulative session execution limit in seconds (0 = unlimited)"),
     ("send_system_notification","bool",       "false",       "Can send system-wide notifications"),
     ("send_user_notification",  "bool",       "false",       "Can send per-user notifications"),
     # LVFS
@@ -230,7 +234,7 @@ for _sec_name, _sec_keys in _SECTIONS:
 def format_perms_reference() -> str:
     """Format the complete permission reference table."""
     lines = [
-        "Permission Reference (21 keys):",
+        "Permission Reference (23 keys):",
         "",
     ]
 
