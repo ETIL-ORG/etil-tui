@@ -114,7 +114,7 @@ Description: ETIL MCP Client TUI
  .
  Connects to an ETIL MCP server via HTTP. Self-contained Python
  virtualenv with all dependencies included.
-Homepage: https://github.com/krystalmonolith/etil-tui
+Homepage: https://github.com/ETIL-ORG/etil-tui
 EOF
 
 # --- Create DEBIAN/postinst ---

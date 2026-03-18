@@ -5,7 +5,7 @@
 
 # ETIL MCP Client TUI
 
-An interactive terminal UI for the [ETIL](https://github.com/krystalmonolith/evolutionary-til) MCP server, built
+An interactive terminal UI for the [ETIL](https://github.com/ETIL-ORG/etil) MCP server, built
 with Python 3.12 and [Textual](https://textual.textualize.io/).
 
 - **Support**: [evolutionary-til-support@googlegroups.com](mailto:evolutionary-til-support@googlegroups.com)

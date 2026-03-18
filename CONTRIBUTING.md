@@ -28,7 +28,7 @@ Thank you for your interest in contributing to the ETIL MCP Client TUI.
 
 ## Reporting Issues
 
-Use the [GitHub issue tracker](https://github.com/krystalmonolith/etil-tui/issues).
+Use the [GitHub issue tracker](https://github.com/ETIL-ORG/etil-tui/issues).
 Include your Python version, OS, and steps to reproduce.
 
 ## License
