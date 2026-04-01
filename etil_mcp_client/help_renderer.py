@@ -40,6 +40,7 @@ CATEGORY_ORDER = [
     "execution",
     "defining",
     "conversion",
+    "evolution",
 ]
 CATEGORY_LABELS = {
     "arithmetic": "Arithmetic",
@@ -71,6 +72,7 @@ CATEGORY_LABELS = {
     "json": "JSON",
     "matrix": "Matrix (Linear Algebra)",
     "mongodb": "MongoDB",
+    "evolution": "Evolution & Selection",
 }
 
 # Meta-commands available in the TUI
