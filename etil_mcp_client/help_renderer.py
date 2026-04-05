@@ -25,6 +25,8 @@ CATEGORY_ORDER = [
     "byte-array",
     "json",
     "matrix",
+    "observable",
+    "hashing",
     "lvfs",
     "file-io-async",
     "file-io-sync",
@@ -41,6 +43,8 @@ CATEGORY_ORDER = [
     "defining",
     "conversion",
     "evolution",
+    "evolution-pool",
+    "mlp",
 ]
 CATEGORY_LABELS = {
     "arithmetic": "Arithmetic",
@@ -51,8 +55,11 @@ CATEGORY_LABELS = {
     "memory": "Memory",
     "math": "Math",
     "string": "String",
+    "map": "Map",
     "array": "Array",
     "byte-array": "Byte Array",
+    "observable": "Observable",
+    "hashing": "Hashing",
     "lvfs": "Virtual Filesystem",
     "file-io-async": "File I/O (Async)",
     "file-io-sync": "File I/O (Sync)",
@@ -73,6 +80,8 @@ CATEGORY_LABELS = {
     "matrix": "Matrix (Linear Algebra)",
     "mongodb": "MongoDB",
     "evolution": "Evolution & Selection",
+    "evolution-pool": "Evolution Pools (library)",
+    "mlp": "MLP (library)",
 }
 
 # Meta-commands available in the TUI
