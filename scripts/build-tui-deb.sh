@@ -16,7 +16,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 VERSION=$(python3 -c "exec(open('$PROJECT_DIR/etil_mcp_client/version.py').read()); print(__version__)")
-ARCH=$(dpkg --print-architecture)
+# Architecture: all — package contains only pure Python code and a venv
+# with no native extensions. Installable on any arch with python3.12+.
+ARCH="all"
 PKG_NAME="etil-tui"
 OUTPUT_DIR="$HOME/workspace/packages"
 
@@ -33,7 +35,7 @@ DEB_FILE="$OUTPUT_DIR/${PKG_NAME}_${VERSION}+${TIMESTAMP}_${ARCH}.deb"
 STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT
 
-echo "Building $PKG_NAME $VERSION for $ARCH ..."
+echo "Building $PKG_NAME $VERSION (Architecture: $ARCH) ..."
 
 # --- Create directory structure ---
 OPT="$STAGE/opt/etil-tui"
@@ -76,6 +78,15 @@ sed -i "s|$OPT/venv|/opt/etil-tui/venv|g" "$OPT/venv/bin/activate"
 sed -i "s|$OPT/venv|/opt/etil-tui/venv|g" "$OPT/venv/bin/activate.csh" 2>/dev/null || true
 sed -i "s|$OPT/venv|/opt/etil-tui/venv|g" "$OPT/venv/bin/activate.fish" 2>/dev/null || true
 sed -i "s|$STAGE||g" "$OPT/venv/pyvenv.cfg"
+
+# Rewrite pyvenv.cfg to use generic /usr/bin/python3 so the venv works
+# on any target arch with any compatible python3 minor version (3.12+).
+cat > "$OPT/venv/pyvenv.cfg" <<PYVENV
+home = /usr/bin
+include-system-site-packages = false
+executable = /usr/bin/python3
+command = /usr/bin/python3 -m venv /opt/etil-tui/venv
+PYVENV
 
 # Fix shebangs in all scripts
 find "$OPT/venv/bin" -type f -exec grep -l "$OPT/venv" {} + 2>/dev/null | while read -r f; do
