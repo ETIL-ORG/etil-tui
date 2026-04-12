@@ -39,15 +39,25 @@ ETIL MCP server directly for a richer experience:
 
 ### Interactive REPL: Simple Read-Evaluate-Process-Loop for the console.
 
-- Note: Further development on the REPL is not planned.
-- Use the TUI or another MCP client as the primary ETIL interface.
 - The REPL only works with a subset of the words, and is primarily a comparative testing tool. 
 
 ```bash
-./build/bin/etil_repl            # interactive mode
-echo '42 . cr' | 
+# interactive mode
+$ build/bin/etil_repl --data-dir evolutionary-til/data
+Evolutionary TIL REPL v1.6.0
+Type '/help' for commands, '/quit' to exit
 
-./build-debug/bin/etil_repl -q   # pipe-friendly quiet mode
+> /help dup
+dup
+  Description:  Duplicate top of stack
+  Stack effect: ( x -- x x )
+  Category:     stack
+> : x 41 + . ;
+> 1 x
+42
+
+# pipe-friendly quiet mode
+./build/bin/etil_repl -q
 ```
 
 - Line editing (arrow keys, Home/End, Ctrl-A/E/K)
@@ -89,7 +99,7 @@ Seven heap-allocated, reference-counted types — all interoperable on the stack
 |------|---------|---------|
 | **String** | `s" hello"` | `s" hello" s" world" s+ type` → `helloworld` |
 | **Array** | `array-new` | `array-new 1 array-push 2 array-push array-length .` → `2` |
-| **ByteArray** | `bytes-new` | `16 bytes-new 255 0 bytes-set` |
+| **ByteArray** | `bytes-new` | `16 bytes-new 0 255 bytes-set` |
 | **Map** | `map-new` | `map-new s" x" 42 map-set s" x" map-get .` → `42` |
 | **JSON** | `j\| ... \|` | `j\| {"a":1} \| s" a" json-get .` → `1` |
 | **Matrix** | `mat-new` | `3 3 mat-eye mat.` (prints 3×3 identity) |
@@ -172,9 +182,9 @@ for filters, documents, and options:
 |------|-------------|-------------|
 | `mongo-find` | `( coll filter opts -- json flag )` | Query with skip/limit/sort/projection |
 | `mongo-count` | `( coll filter opts -- n flag )` | Server-side count (O(index), not O(N)) |
-| `mongo-insert` | `( coll doc opts -- flag )` | Insert document |
-| `mongo-update` | `( coll filter update opts -- flag )` | Update with upsert/hint/collation |
-| `mongo-delete` | `( coll filter opts -- flag )` | Delete with hint/collation |
+| `mongo-insert` | `( coll doc -- id flag )` | Insert document, return `_id` |
+| `mongo-update` | `( coll filter update opts -- n flag )` | Update with upsert/hint/collation |
+| `mongo-delete` | `( coll filter opts -- n flag )` | Delete with hint/collation |
 
 `mongo-find` returns `HeapJson` directly — no parsing step needed. The unified
 `MongoQueryOptions` struct supports `skip`, `limit`, `sort`, `projection`, `hint`,
@@ -262,7 +272,8 @@ OAuth login, script execution (`--exec`/`--execux`), and session logging.
 
 - **JWT with RBAC** — RS256 JWTs with clock-skew tolerance, issued-at validation,
   type-safe claim extraction, and per-role permissions: HTTP domain allowlists,
-  instruction budgets, file I/O gates, MongoDB access, session quotas
+  instruction budgets, per-call and cumulative execution time limits, file I/O gates,
+  MongoDB access, session quotas
 - **OAuth Device Flow** — GitHub + Google via RFC 8628. Three endpoints: `/auth/device`,
   `/auth/poll`, `/auth/token`. Stateless — provider tokens used once then discarded
 - **API key fallback** — backward-compatible Bearer token auth for simple deployments
@@ -375,7 +386,7 @@ LITE
 | Comparison | `=` `<>` `<` `>` `<=` `>=` `0=` `0<` `0>` |
 | Logic | `true` `false` `not` `bool` `and` `or` `xor` `invert` `lshift` `rshift` `lroll` `rroll` |
 | I/O | `.` `.s` `cr` `emit` `space` `spaces` `words` |
-| Memory | `create` `,` `@` `!` `allot` `immediate` |
+| Memory | `create` `,` `@` `!` `allot` `cell-get` `cell-set` `immediate` |
 | Math | `sqrt` `sin` `cos` `tan` `tanh` `asin` `acos` `atan` `atan2` `log` `log2` `log10` `exp` `pow` `ceil` `floor` `round` `trunc` `fmin` `fmax` `pi` `f~` `random` `random-seed` `random-range` |
 | String | `type` `s.` `s+` `s=` `s<>` `slength` `substr` `strim` `sfind` `sreplace` `ssplit` `sjoin` `sregex-find` `sregex-replace` `sregex-search` `sregex-match` `staint` `sprintf` |
 | Array | `array-new` `array-push` `array-pop` `array-get` `array-set` `array-length` `array-shift` `array-unshift` `array-compact` `array-reverse` |
@@ -472,6 +483,7 @@ are not yet implemented:
 | [Q](#appendix-q-http-client-and-mongodb) | HTTP Client and MongoDB | 7 |
 | [R](#appendix-r-system-time-and-debug) | System, Time, and Debug | 21 |
 | [S](#appendix-s-observables) | Observables | 60 |
+| [T](#appendix-t-evolution-and-selection) | Evolution and Selection | 7 |
 
 ---
 
@@ -654,7 +666,7 @@ Regex uses the C++ `<regex>` library (ECMAScript syntax by default).
 
 | Word | Stack Effect | Description | Example |
 |------|-------------|-------------|---------|
-| `sregex-find` | `( str pattern -- match flag )` | First match | `s" abc123" s" [0-9]+" sregex-find` → `"123" true` |
+| `sregex-find` | `( str pattern -- index )` | First match position (-1 if not found) | `s" abc123" s" [0-9]+" sregex-find` → `3` |
 | `sregex-replace` | `( str pat repl -- result )` | Replace matches (clears taint) | `s" foo123bar" s" [0-9]+" s" NUM" sregex-replace` → `"fooNUMbar"` |
 | `sregex-search` | `( str pattern -- matches flag )` | Search with captures | `s" 2026-03-12" s" ([0-9]+)-([0-9]+)-([0-9]+)" sregex-search` → array `true` |
 | `sregex-match` | `( str pattern -- matches flag )` | Full string match | `s" hello" s" h.*o" sregex-match` → array `true` |
@@ -687,7 +699,7 @@ processing without observables.
 | `array-pop` | `( array -- array val )` | Remove from end | `[1,2,3] array-pop` → `[1,2] 3` |
 | `array-get` | `( array idx -- val )` | Get by index | `[10,20,30] 1 array-get` → `20` |
 | `array-set` | `( array idx val -- array )` | Set by index | `[10,20,30] 1 99 array-set` → `[10,99,30]` |
-| `array-length` | `( array -- array n )` | Element count (non-consuming) | `[1,2,3] array-length` → `[1,2,3] 3` |
+| `array-length` | `( array -- n )` | Element count (consuming — use `dup array-length` to keep array) | `[1,2,3] array-length` → `3` |
 
 ### Queue and Deque Operations
 
@@ -838,7 +850,9 @@ primitives for building multilayer perceptrons), and data analysis. Solver and
 decomposition words return a Boolean success flag.
 
 Three TIL-level convenience words (`mat-xavier`, `mat-he`, `mat-mse`) are defined in
-`data/help.til` for neural network weight initialization and loss computation.
+`data/library/mlp.til` for neural network weight initialization and loss computation.
+They become available after `include /library/mlp.til` (or `include data/library/mlp.til`
+for native builds).
 
 **Words:** `json->mat` `mat+` `mat-` `mat*` `mat-add-col` `mat-apply` `mat-clip`
 `mat-col` `mat-col-sum` `mat-cols` `mat-cross-entropy` `mat-det` `mat-diag` `mat-eigen`
@@ -942,7 +956,9 @@ the **pre-activation** input, not the activated output.
 | `mat->json` | `( mat -- json )` | To JSON `{rows, cols, data}` |
 | `json->mat` | `( json -- mat )` | From JSON `{rows, cols, data}` |
 
-### TIL-Level Convenience
+### TIL-Level Convenience (from `data/library/mlp.til`)
+
+Requires `include /library/mlp.til` before use.
 
 | Word | Stack Effect | Description |
 |------|-------------|-------------|
@@ -1102,6 +1118,8 @@ that manufacture new words with shared behavior and per-word data.
 | `create` | `( -- )` | Define a word with a data field (reads name from input) |
 | `,` | `( x -- )` | Append value to last created word's data field |
 | `allot` | `( n -- )` | Reserve n cells in last created word |
+| `cell-get` | `( dataref n -- value )` | Fetch value at cell index n from a data field |
+| `cell-set` | `( value dataref n -- )` | Store value at cell index n in a data field |
 | `does>` | `( -- )` | Set runtime behavior for `create`d words (**compile-only**) |
 | `immediate` | `( -- )` | Mark last defined word as immediate (runs during compilation) |
 
@@ -1351,15 +1369,15 @@ return stack; `r>` moves it back; `r@` copies without removing. Values pushed wi
 `>r` **must** be popped with `r>` before the word returns.
 
 ```
-> # Save a value across a computation:
-> : array-sum  ( array -- n )
-    0 >r                          # running sum on return stack
-    dup array-length drop 0 do
-      dup i array-get r> + >r     # add element to sum
-    loop
-    drop r> ;                     # retrieve sum
-> array-new 10 array-push 20 array-push 30 array-push array-sum .
-60
+> # Save a value across a computation (avoid >r/r> across do/loop —
+> # do uses the return stack for its loop counter).
+> : hypot  ( a b -- sqrt(a*a + b*b) )
+    dup * >r                      # save b*b on return stack
+    dup *                         # compute a*a
+    r> +                          # retrieve b*b, add
+    sqrt ;
+> 3.0 4.0 hypot .
+5
 ```
 
 ```
@@ -2554,17 +2572,309 @@ pipelines:
 
 ---
 
-## References
+## Appendix T: Evolution and Selection
 
-- **FORTH 2012 Standard**: http://www.forth200x.org/documents/forth-2012.pdf
-- **Threaded Interpretive Languages**: R.G. Loeliger, 1981
-- **Genetic Programming**: Koza, "Genetic Programming", 1992
-- **MCP Specification**: https://modelcontextprotocol.io/specification/2024-11-05
-- **JSON-RPC Specification**: https://www.jsonrpc.org/specification
+ETIL's core innovation: multiple implementations per word with runtime selection and evolutionary optimization. The selection engine chooses which implementation to execute; the evolution engine creates new implementations via AST-level genetic operators.
 
-## License
+### Selection Words
 
-BSD-3-Clause
+These words control the runtime selection strategy. Available in both the REPL and MCP server sessions.
+
+| Word | Stack Effect | Description |
+|------|-------------|-------------|
+| `select-strategy` | `( n -- )` | Set strategy: 0=latest, 1=weighted-random, 2=epsilon-greedy, 3=UCB1 |
+| `select-epsilon` | `( f -- )` | Set epsilon for epsilon-greedy (0.0=always exploit, 1.0=always explore) |
+| `select-off` | `( -- )` | Revert to deterministic latest-wins selection |
+
+**Strategy 0 — Latest (default):** Always picks the most recently registered implementation. Identical to standard FORTH behavior. Zero overhead.
+
+**Strategy 1 — Weighted Random:** Probability proportional to each implementation's `weight_` field. After evolution updates weights based on fitness, higher-fitness implementations are selected more often.
+
+**Strategy 2 — Epsilon-Greedy:** With probability (1-epsilon), pick the highest-weight implementation. With probability epsilon, pick uniformly at random. Classic explore/exploit tradeoff.
+
+**Strategy 3 — UCB1:** Upper Confidence Bound. Balances exploitation (high success rate) with exploration (under-tested implementations). Automatically explores new implementations.
+
+### Evolution Words
+
+These words drive the evolutionary pipeline. Available in both the REPL and MCP server sessions.
+
+| Word | Stack Effect | Description |
+|------|-------------|-------------|
+| `evolve-register` | `( word-str tests-array -- flag )` | Register test cases for fitness evaluation |
+| `evolve-register-pool` | `( word-str tests-array pool-array -- flag )` | Register test cases with a restricted word pool |
+| `evolve-word` | `( word-str -- n )` | Run one generation of evolution, return children created |
+| `evolve-all` | `( -- )` | Evolve all words with registered test cases |
+| `evolve-status` | `( word-str -- n )` | Return number of generations evolved |
+| `evolve-sub` | `( sub-str chain-str -- n )` | MCE: mutate sub-concept, evaluate chain for fitness |
+| `evolve-chain` | `( chain-str subs-array gens -- )` | MCE: round-robin evolution of sub-concepts |
+| `evolve-seed!` | `( n -- )` | Seed all evolution RNGs for reproducible runs |
+| `evolve-dag-register` | `( root-str tests-array -- flag )` | Build ConceptDAG from call graph, register tests |
+| `evolve-dag` | `( root-str generations -- )` | Run DAG-aware contribution-weighted evolution |
+| `evolve-dag-show` | `( root-str -- )` | Print ConceptDAG structure with weights and stats |
+| `evolve-contribution` | `( concept-str -- x )` | Query a concept's contribution weight |
+
+### Semantic Tags and Bridges
+
+Tags enable tiered substitution — mutations prefer words with matching tags before falling back to signature-compatible alternatives.
+
+| Word | Stack Effect | Description |
+|------|-------------|-------------|
+| `evolve-tag` | `( word-str tag-str -- )` | Add a semantic tag to a word (e.g., `"+" "arithmetic"`) |
+| `evolve-untag` | `( word-str -- )` | Remove all semantic tags from a word |
+| `evolve-bridge` | `( from-type to-type bridge-word -- )` | Register a type conversion bridge word |
+
+### Fitness Configuration
+
+| Word | Stack Effect | Description |
+|------|-------------|-------------|
+| `evolve-fitness-mode` | `( n -- )` | 0=binary pass/fail (default), 1=distance-based scoring |
+| `evolve-fitness-alpha` | `( x -- )` | Distance scaling factor alpha (default 1.0) |
+| `evolve-instruction-budget` | `( n -- )` | Max instructions per fitness evaluation (default 100000) |
+
+Distance mode computes `1/(1 + alpha * |actual - expected|)` per test case, providing a smooth gradient instead of a binary cliff.
+
+### Mutation Weights
+
+| Word | Stack Effect | Description |
+|------|-------------|-------------|
+| `evolve-mutation-weights` | `( sub per mov ctl grw shr -- )` | Set weights for the 6 mutation operators |
+
+The six operators and their default weights:
+
+| Operator | Default | Description |
+|----------|---------|-------------|
+| Substitute | 0.30 | Replace a word call with a semantically compatible alternative |
+| Perturb | 0.15 | Add noise to a numeric literal (±1..3 for small integers, Gaussian for floats) |
+| Move | 0.10 | Relocate a word call to a different position |
+| Control flow | 0.10 | Wrap/unwrap a word in `if/then` |
+| Grow | 0.20 | Insert a new word or literal into the AST |
+| Shrink | 0.15 | Remove a node from the AST |
+
+### The Evolution Pipeline
+
+When `evolve-word` is called, the engine:
+
+1. **Selects parents** from existing implementations (weighted by fitness)
+2. **Decompiles** the parent's bytecode to an AST (Abstract Syntax Tree)
+3. **Mutates** the AST using one of 6 weighted operators (substitute, perturb, move, control flow, grow, shrink)
+4. **Repairs** type mismatches by inserting stack shuffling (`swap`, `rot`, `roll`) or bridge words from the BridgeMap
+5. **Compiles** the mutated AST back to bytecode with structure markers
+6. **Evaluates** the child against registered test cases (fitness = correctness + speed)
+7. **Updates weights** on all implementations based on fitness scores
+8. **Prunes** the weakest implementations if the population exceeds the limit
+
+### Type-Directed Bridges
+
+The **substitute** and **grow** mutation operators are type-aware. Before selecting a candidate word, the engine simulates the type stack at the mutation point and filters candidates using a promotion-aware compatibility matrix:
+
+- **Integer on stack, word wants Float**: compatible (widening promotion)
+- **Float on stack, word wants Integer**: incompatible (narrowing)
+- **Boolean on stack, word wants Integer**: incompatible (undefined)
+- **Unknown on either side**: always compatible (permissive)
+
+Bridge words registered via `evolve-bridge` (e.g., `int->float`, `array-length`) appear naturally as type-legal candidates. Adjacent inverse bridges (e.g., `int->float` followed by `float->int`) are detected and rejected to prevent no-op cycles.
+
+Type repair (step 4) can insert single-hop or multi-hop bridge words when a type mismatch can't be resolved by stack shuffling alone. For example, if the stack has `Array` but the next word needs `Float`, repair inserts `array-length` (Array→Integer) + `int->float` (Integer→Float).
+
+Fitness evaluation errors from mutated code are routed to the evolution log file, not stderr.
+
+### Type Bridge Back Propagation (TBBP)
+
+Each `BridgeEdge` carries a learned weight. When type repair needs to select a bridge, it uses **weighted-random sampling** among available paths proportional to path weight (product of edge weights). After each mutation, weights update via exponential moving average:
+
+```
+weight = (1 - α) × weight + α × reward
+reward = 1.0 if child_fitness > parent_fitness, else 0.0
+```
+
+Weights have a floor (default 0.05) to preserve exploration. The default learning rate `α = 0.1` and floor are configurable via `EvolutionConfig::tbbp_alpha` and `tbbp_min_weight`.
+
+**Runtime toggle:** `evolve-tbbp-enabled?` ( flag -- ) turns TBBP on/off at runtime for ablation studies. When disabled, bridges use deterministic BFS selection (first path found). Default: on.
+
+**Log output** (at `EvolveLogCategory::Bridge`):
+```
+[bridge] select: Matrix->Float chose 'mat-norm' (w=0.845, 4 candidates)
+[bridge] update: 'mat-norm' 0.845 -> 0.861 (reward=1)
+[bridge] summary: top 3 of 5 used bridges:
+  int->float (w=0.923, 45 sel, 42 succ, 93% rate)
+  array-length (w=0.872, 12 sel, 10 succ, 83% rate)
+  mat-norm (w=0.845, 8 sel, 6 succ, 75% rate)
+```
+
+Weights reset per evolution run (no persistence). Useful for discovering which bridges are productive for a given problem domain.
+
+### Modular Co-Evolution (MCE)
+
+MCE decomposes a target word into sub-concepts and evolves each independently while evaluating chain-level fitness. Instead of evolving one monolithic word, users decompose the problem:
+
+```til
+: square-term  dup * ;                                     # sub-concept
+: linear-term  3 * ;                                       # sub-concept
+: offset       5 ;                                         # sub-concept
+: target-fn    dup square-term swap linear-term + offset + ;  # chain
+
+# Register tests on the chain word
+s" target-fn" tests evolve-register drop
+
+# Round-robin: each generation evolves one sub-concept via chain fitness
+s" target-fn"
+  array-new s" square-term" array-push s" linear-term" array-push s" offset" array-push
+  100 evolve-chain
+```
+
+`evolve-chain` iterates N generations, calling `evolve-sub` on each sub-concept in round-robin order. `evolve-sub` mutates the sub-concept's impls but evaluates the chain word's test cases for fitness — so children are scored on their contribution to the full chain, not in isolation.
+
+`evolve-seed!` seeds all evolution RNGs (engine, AST genetic ops, bytecode genetic ops, bridge map) for deterministic, reproducible benchmark runs.
+
+## Appendix U: Evolution Logging
+
+The evolution engine writes detailed diagnostic logs to timestamped files (`YYYYMMDDThhmmss-evolve.log`).
+
+### Logging Control Words
+
+| Word | Stack Effect | Description |
+|------|-------------|-------------|
+| `evolve-log-dir` | `( dir-str -- )` | Set output directory for log files |
+| `evolve-log-start` | `( level mask -- )` | Start logging at level (1=logical, 2=granular) with category bitmask |
+| `evolve-log-stop` | `( -- )` | Stop logging and close the log file |
+| `evolve-log-show-failed` | `( flag -- )` | Show rejected mutations in diff view (default: off) |
+
+### Log Levels
+
+| Level | Name | Description |
+|-------|------|-------------|
+| 1 | Logical | Per-generation summaries, child fitness, operator selection |
+| 2 | Granular | All of logical plus baseline fitness, operator fallback chains, detail tags |
+
+### Log Category Bitmask
+
+Categories are independently enabled via the bitmask parameter to `evolve-log-start`. Use `-1` (all bits set) to enable everything.
+
+| Bit | Value | Category | Description |
+|-----|-------|----------|-------------|
+| 0 | 0x0001 | Engine | Generation start/end, operator selection, impl boundaries |
+| 1 | 0x0002 | Fitness | Child fitness scores |
+| 2 | 0x0004 | Selection | Parent selection, pruning decisions |
+| 3 | 0x0008 | Crossover | Crossover attempts and results |
+| 4 | 0x0010 | Substitute | Word substitution with tier info (L1/L2/L3) |
+| 5 | 0x0020 | Perturb | Constant perturbation (old → new) |
+| 6 | 0x0040 | Move | Block move operations |
+| 7 | 0x0080 | Control | Control flow wrap/unwrap |
+| 8 | 0x0100 | Grow | Node insertion |
+| 9 | 0x0200 | Shrink | Node removal |
+| 10 | 0x0400 | Repair | Type repair success/failure |
+| 11 | 0x0800 | Tag | Tag inference at `;` time |
+| 12 | 0x1000 | Pool | Pool-restricted candidate selection |
+| 13 | 0x2000 | Bridge | Bridge word insertion, cycle detection, substitute/grow bridge events |
+| 14 | 0x4000 | Diff | Side-by-side before/after mutation diff |
+| 15 | 0x8000 | ASTDump | Tree-format AST dumps |
+
+### Diff View Format
+
+When the Diff category is enabled, each mutation is displayed as a four-column table:
+
+```
++-  MUTATION: substitute  ----------------------------------------
+| BEFORE                      | AFTER                       | R | ANNOTATION
+| dup                         | dup                         |   |
+| +                           | *                           |   | <- changed
++- RESULT: success ------------------------------------------------------
+```
+
+The `R` column shows `*` for lines inserted or modified by type repair. The `ANNOTATION` column marks `<- changed`, `<- inserted`, or `<- removed` lines, with `(repair)` suffix when type repair was responsible.
+
+### Impl Boundary Markers
+
+When Diff or ASTDump is enabled, each mutation attempt is bracketed by:
+
+```
+===== MUTATE impl#351 (gen 0, 'target-fn') BEGIN =====
+... mutation details ...
+===== MUTATE impl#351 → impl#353 END (success) =====
+```
+
+### MLP Library Words (data/library/mlp.til)
+
+The MLP library provides feedforward neural network training in pure TIL. Load with `include data/library/mlp.til`.
+
+| Word | Stack Effect | Description |
+|------|-------------|-------------|
+| `make-layer` | `( fan_in fan_out act-xt act'-xt -- layer )` | Create a layer with Xavier-initialized weights |
+| `make-network` | `( layer1 ... layerN n -- network )` | Assemble layers into a network |
+| `forward` | `( X network -- Y )` | Forward pass |
+| `train` | `( X Y network lr epochs -- network )` | Train for N epochs with SGD |
+| `predict` | `( X network -- Y )` | Inference (alias for `forward`) |
+
+### Examples
+
+**Multiple implementations with weighted selection:**
+
+```forth
+: activate mat-relu ;     \ Implementation 1
+: activate mat-sigmoid ;  \ Implementation 2
+
+\ Set weights (via MCP set_weight tool or programmatically)
+\ Then switch to weighted random selection:
+1 select-strategy
+
+\ Now "activate" probabilistically picks between ReLU and sigmoid
+\ based on their weights. Higher fitness = higher selection probability.
+```
+
+**XOR neural network training:**
+
+```forth
+include data/library/mlp.til
+
+7 random-seed
+2 4 ' mat-relu ' mat-relu' make-layer
+4 1 ' mat-sigmoid ' mat-sigmoid' make-layer
+2 make-network
+variable net
+net !
+
+\ Training data: X = 2x4 (inputs), Y = 1x4 (XOR outputs)
+array-new
+  array-new 0.0 array-push 0.0 array-push 1.0 array-push 1.0 array-push array-push
+  array-new 0.0 array-push 1.0 array-push 0.0 array-push 1.0 array-push array-push
+array->mat
+variable X
+X !
+
+array-new
+  array-new 0.0 array-push 1.0 array-push 1.0 array-push 0.0 array-push array-push
+array->mat
+variable Y
+Y !
+
+X @ Y @ net @ 1.0 5000 train net !
+\ Output: Epoch 0: loss = 0.2648 ... Epoch 4500: loss = 0.00006
+```
+
+**Registering test cases for evolution:**
+
+```forth
+: double dup + ;
+
+\ Build test cases as array of maps with "in" and "out" keys
+array-new
+  map-new s" in" array-new 3 array-push map-set
+         s" out" array-new 6 array-push map-set array-push
+  map-new s" in" array-new 5 array-push map-set
+         s" out" array-new 10 array-push map-set array-push
+
+s" double" swap evolve-register drop
+
+\ Run 10 generations of evolution
+10 0 do s" double" evolve-word drop loop
+
+\ Check how many generations ran
+s" double" evolve-status .   \ => 10
+```
+
+> **Note:** Evolution outcomes are **non-deterministic** — different random seeds produce different mutations, fitness scores, and surviving implementations. The error messages during `evolve-word` (e.g., "Error in 'mat-apply'") are expected — they come from mutated code that calls random words and fails fitness evaluation. The evolution engine discards these failed mutants automatically.
+
+---
 
 ## Author
 
@@ -2597,3 +2907,15 @@ TIL == **T**hreaded **I**nterpretive **L**anguage
 The FORTH programming language was invented by Charles H. Moore in the late 1960s, with its
 first widely recognized version created in 1970. It was developed to control telescopes and
 for other real-time applications.
+
+## References
+
+- **FORTH 2012 Standard**: http://www.forth200x.org/documents/forth-2012.pdf
+- **Threaded Interpretive Languages**: R.G. Loeliger, 1981
+- **Genetic Programming**: Koza, "Genetic Programming", 1992
+- **MCP Specification**: https://modelcontextprotocol.io/specification/2025-11-25
+- **JSON-RPC Specification**: https://www.jsonrpc.org/specification
+
+## License
+
+BSD-3-Clause
