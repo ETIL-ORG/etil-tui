@@ -71,8 +71,8 @@ def main() -> None:
         help="Start OAuth login on launch (default provider: github)",
     )
     parser.add_argument(
-        "--nologs", action="store_true",
-        help="Disable automatic log file creation on startup",
+        "--log", action="store_true",
+        help="Enable automatic log file creation on startup",
     )
     parser.add_argument(
         "--norotate", action="store_true",
@@ -112,7 +112,7 @@ def main() -> None:
         sys.exit(0)
 
     config = ClientConfig()
-    config.auto_logs = not args.nologs
+    config.auto_logs = args.log
     config.auto_rotate = not args.norotate
 
     if args.screendir:

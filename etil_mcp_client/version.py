@@ -2,4 +2,4 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """Single source of truth for the TUI version."""
 
-__version__ = "1.2.2"
+__version__ = "1.3.0"

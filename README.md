@@ -82,8 +82,8 @@ etil-tui --execux my_script.til
 | `--list-connections` | List saved connections and exit |
 | `--exec SOURCE` | Execute a `.til` file or URL, then exit |
 | `--execux SOURCE` | Execute a `.til` file or URL, then stay interactive |
-| `--nologs` | Disable automatic session logging |
-| `--norotate` | Keep all old log files (skip rotation) |
+| `--log` | Enable automatic session logging on startup |
+| `--norotate` | Keep all old log files (skip rotation when `--log` is active) |
 | `--screendir DIR` | Directory for screenshot SVGs (`.` = current directory) |
 | `--logdir DIR` | Directory for log files (`.` = current directory) |
 
@@ -158,8 +158,9 @@ The TUI automatically opens both plain-text and JSONL log files on startup:
 
 Default directory: `/tmp` (override with `--logdir`).
 
-Old logs are rotated on startup, keeping the 5 most recent of each type. Use `--norotate` to keep all logs,
-or `--nologs` to disable automatic logging entirely. The `/log` command toggles logging on/off during a session.
+Logging is off by default. Use `--log` to enable automatic logging on startup.
+Old logs are rotated on startup, keeping the 5 most recent of each type. Use `--norotate` to keep all logs.
+The `/log` meta-command toggles logging on/off during a session.
 
 ## Server Response Formatting
 

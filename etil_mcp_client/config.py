@@ -25,7 +25,7 @@ class ClientConfig:
     max_notifications: int = 100
 
     # Logging options
-    auto_logs: bool = True       # Start logs on startup (--nologs sets False)
+    auto_logs: bool = False      # Start logs on startup (--log sets True)
     auto_rotate: bool = True     # Rotate old logs on startup (--norotate sets False)
 
     # Directory overrides (CLI --screendir / --logdir)
