@@ -9,8 +9,9 @@ An interactive terminal UI for the [ETIL](https://github.com/ETIL-ORG/etil) MCP 
 with Python 3.12 and [Textual](https://textual.textualize.io/).
 
 - **Support**: [evolutionary-til-support@googlegroups.com](mailto:evolutionary-til-support@googlegroups.com)
-- **Platform**: Linux only. Tested on Ubuntu 24.04 — YMMV on other distributions. Not available for Windows.
-  macOS-specific modifications will not be accepted.
+- **Platform**: Architecture-independent `.deb` package for any Debian/Ubuntu system with Python 3.12+.
+  Pure Python — could theoretically run on other OSes, but has not been ported for the Windows
+  filesystem nor tested outside Linux. macOS-specific modifications will not be accepted.
 
 ## Features
 
@@ -28,7 +29,16 @@ with Python 3.12 and [Textual](https://textual.textualize.io/).
 
 ## Installation
 
-### From `.deb` package (Ubuntu 24.04)
+### From GitHub Releases
+
+Download the latest `.deb` from the
+[Releases page](https://github.com/ETIL-ORG/etil-tui/releases) and install:
+
+```bash
+sudo dpkg -i etil-tui_*.deb
+```
+
+### Build from source
 
 ```bash
 scripts/build-tui-deb.sh --output /tmp
@@ -36,7 +46,7 @@ sudo dpkg -i /tmp/etil-tui_*.deb
 ```
 
 The `.deb` package installs a self-contained Python virtual environment at `/opt/etil-tui/` and a
-launcher script at `/usr/local/bin/etil-tui`.
+launcher script at `/usr/bin/etil-tui`.
 
 ## Dependencies
 
@@ -184,7 +194,7 @@ scripts/build-tui-deb.sh --output /tmp
 ```
 
 The script creates a self-contained `.deb` package with an embedded Python virtual environment. The package
-name includes a build timestamp: `etil-tui_X.Y.Z+YYYYMMDDhhmmss_amd64.deb`.
+name includes a build timestamp: `etil-tui_X.Y.Z+YYYYMMDDhhmmss_all.deb`.
 
 ## Project Structure
 
