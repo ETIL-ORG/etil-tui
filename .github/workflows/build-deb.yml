@@ -1,0 +1,38 @@
+# Copyright (c) 2026 Mark Deazley. All rights reserved.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Build the etil-tui .deb package and attach it to a GitHub Release
+# when a version tag (vX.Y.Z) is pushed.
+
+name: Build .deb Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-deb:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build .deb package
+        run: |
+          scripts/build-tui-deb.sh --output "${{ github.workspace }}/dist"
+
+      - name: Upload .deb as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: etil-tui-deb
+          path: dist/*.deb
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.deb
+          generate_release_notes: true
